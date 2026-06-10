@@ -101,7 +101,7 @@ def main():
     st.title("Análisis de Combustibles")
 
 
-        dibujar_mas_caras(datos)
+    dibujar_mas_caras(datos)
 
     except Exception as e:
         st.error(f"Ocurrió un error: {e}")
