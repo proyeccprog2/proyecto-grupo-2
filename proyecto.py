@@ -103,9 +103,5 @@ def main():
 
     dibujar_mas_caras(datos)
 
-    except Exception as e:
-        st.error(f"Ocurrió un error: {e}")
-
-
 if __name__ == "__main__":
     main()
