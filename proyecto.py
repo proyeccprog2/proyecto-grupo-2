@@ -100,6 +100,9 @@ def main():
 
     st.title("Análisis de Combustibles")
 
+    datos = leer_datos_csv(
+        "precios_surtidor_2024_2025_2026.csv"
+    )
 
     dibujar_mas_caras(datos)
 
