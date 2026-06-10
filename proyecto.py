@@ -32,3 +32,11 @@ datos = leer_datos_csv("precios_surtidor_2024_2025_2026.csv")
 
 print(len(datos))
 print(datos[0])
+
+def estaciones_mas_caras(datos: list[dict], tipo: str, cantidad: int=5) -> list[dict]:
+    """
+    Dado un dataset, deuvelve una lista con las 'cantidad' estaciones mas caras de GNC.
+    """
+    print("obteniendo estaciones unicas")
+    datos = obtener_estaciones_unicas(datos)
+    estaciones = []
