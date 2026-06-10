@@ -4,7 +4,6 @@ import matplotlib.pyplot as plt
 
 
 def leer_datos_csv(ruta: str) -> list[dict]:
-
     with open(ruta, newline="", encoding="utf-8") as archivo:
         lector = csv.DictReader(archivo)
         dataset = list(lector)
@@ -43,50 +42,55 @@ def obtener_estaciones_unicas(estaciones):
     return unicas
 
 
-def estaciones_mas_caras(datos: list[dict], tipo: str, cantidad: int = 5) -> list[dict]:
-    """
-    Devuelve las 'cantidad' estaciones más caras para un tipo de combustible.
-    """
+def estaciones_mas_caras(datos, tipo, cantidad=5):
 
     datos = obtener_estaciones_unicas(datos)
 
     filtradas = []
 
     for est in datos:
-        if est["producto"] == tipo.upper():
-            filtradas.append(est)
+        if "producto" in est:
+            if str(est["producto"]).upper() == tipo.upper():
+                filtradas.append(est)
 
     filtradas.sort(
-        key=lambda estacion: estacion["precio"],
+        key=lambda x: x["precio"],
         reverse=True
     )
 
     return filtradas[:cantidad]
 
 
-def dibujar_mas_caras(datos: list[dict]):
+def dibujar_mas_caras(datos):
 
-    st.subheader("Top 5 estaciones más caras del país en GNC")
+    st.subheader("Top 5 estaciones más caras de GNC")
 
     top5 = estaciones_mas_caras(datos, "GNC")
+
+    st.write("Cantidad de estaciones encontradas:", len(top5))
+
+    if len(top5) == 0:
+        st.error("No se encontraron estaciones de GNC.")
+        return
 
     nombres = []
     precios = []
 
     for est in top5:
-        nombre = f"{est['empresa']} ({est['provincia']})"
-        nombres.append(nombre)
+        nombres.append(
+            f"{est['empresa']} ({est['provincia']})"
+        )
         precios.append(est["precio"])
 
     fig, ax = plt.subplots()
 
     ax.bar(nombres, precios)
 
-    ax.set_xlabel("Estaciones")
+    ax.set_xlabel("Estación")
     ax.set_ylabel("Precio")
     ax.set_title("Top 5 estaciones más caras de GNC")
 
-    plt.xticks(rotation=45, ha="right")
+    plt.xticks(rotation=45)
     plt.tight_layout()
 
     st.pyplot(fig)
@@ -94,16 +98,31 @@ def dibujar_mas_caras(datos: list[dict]):
 
 def main():
 
-    import os
+    st.title("Análisis de Combustibles")
 
-    print("Directorio actual:")
-    print(os.getcwd())
+    try:
+        datos = leer_datos_csv(
+            "precios_surtidor_2024_2025_2025.csv"
+        )
 
-    print("\nArchivos disponibles:")
-    print(os.listdir())
+        st.success(f"CSV cargado correctamente. Registros: {len(datos)}")
 
-    datos = leer_datos_csv(
-        "precios_surtidor_2024_2025_2025.csv"
-    )
+        st.subheader("Primeros registros")
+        st.write(datos[:3])
 
-    dibujar_mas_caras(datos)
+        productos = set()
+
+        for fila in datos:
+            productos.add(str(fila["producto"]))
+
+        st.subheader("Productos encontrados")
+        st.write(sorted(productos))
+
+        dibujar_mas_caras(datos)
+
+    except Exception as e:
+        st.error(f"Ocurrió un error: {e}")
+
+
+if __name__ == "__main__":
+    main()
