@@ -100,23 +100,6 @@ def main():
 
     st.title("Análisis de Combustibles")
 
-    try:
-        datos = leer_datos_csv(
-            "precios_surtidor_2024_2025_2026.csv"
-        )
-
-        st.success(f"CSV cargado correctamente. Registros: {len(datos)}")
-
-        st.subheader("Primeros registros")
-        st.write(datos[:3])
-
-        productos = set()
-
-        for fila in datos:
-            productos.add(str(fila["producto"]))
-
-        st.subheader("Productos encontrados")
-        st.write(sorted(productos))
 
         dibujar_mas_caras(datos)
 
