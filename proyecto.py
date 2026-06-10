@@ -94,14 +94,16 @@ def dibujar_mas_caras(datos: list[dict]):
 
 def main():
 
-    st.title("Análisis de combustibles")
+    import os
+
+    print("Directorio actual:")
+    print(os.getcwd())
+
+    print("\nArchivos disponibles:")
+    print(os.listdir())
 
     datos = leer_datos_csv(
         "precios_surtidor_2024_2025_2025.csv"
     )
 
     dibujar_mas_caras(datos)
-
-
-if __name__ == "__main__":
-    main()
