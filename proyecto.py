@@ -1,5 +1,6 @@
 import csv
-
+import streamlit as st
+import matplotlib.pyplot as plt
 
 def leer_datos_csv(ruta: str) -> list[dict]:
 
@@ -40,3 +41,50 @@ def estaciones_mas_caras(datos: list[dict], tipo: str, cantidad: int=5) -> list[
     print("obteniendo estaciones unicas")
     datos = obtener_estaciones_unicas(datos)
     estaciones = []
+def obtener_estaciones_unicas(estaciones):
+    unicas = []
+    vistos = set()
+
+    for est in estaciones:
+        if (est["idempresa"]) not in vistos:
+            unicas.append(est)
+            vistos.add(est["idempresa"])
+
+    return unicas
+
+def dibujar_mas_caras(datos: list[dict]):
+    st.subheader("top 5 estaciones más caras del país en GNC")
+
+    top5 = estaciones_mas_caras(datos, "GNC")
+
+    nombres = []
+    precios = []
+    colores = []
+    #adicional si la estacion pertenece a YPF le agrega una estrellita ⭐ al nombre y se guarda el color azul para destacarla en el gráfico.
+
+
+    for est in top5:
+        nombre = f"{est['empresa']} ({est['provincia']})"
+        if est["es_ypf"]:
+            nombre += " (*)"
+            colores.append("blue")
+        else:
+            colores.append("red")
+        nombres.append(nombre)
+        precios.append(est["precio"])
+
+    fig, ax = plt.subplots()
+    ax.bar(nombres, precios, color=colores)
+    ax.set_xlabel("Estaciones")
+    ax.set_ylabel("Precio ($/ litro)")
+    ax.set_title("Top 5 estaciones más caras de GNC")
+    plt.xticks(rotation=45, ha='right')
+
+    st.pyplot(fig)
+
+def main():
+    # Cargar datos
+    datos = leer_datos_csv("precios_surtidor_2024_2025_2026.csv")
+    dibujar_mas_caras(datos)
+# Ejecutar la aplicación
+main()
