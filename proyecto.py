@@ -102,7 +102,7 @@ def main():
 
     try:
         datos = leer_datos_csv(
-            "precios_surtidor_2024_2025_2025.csv"
+            "precios_surtidor_2024_2025_2026.csv"
         )
 
         st.success(f"CSV cargado correctamente. Registros: {len(datos)}")
