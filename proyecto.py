@@ -49,16 +49,23 @@ def estaciones_mas_caras(datos, tipo, cantidad=5):
     filtradas = []
 
     for est in datos:
-        if "producto" in est:
-            if str(est["producto"]).upper() == tipo.upper():
-                filtradas.append(est)
+        if str(est["producto"]).upper() == tipo.upper():
+            filtradas.append(est)
 
-    filtradas.sort(
-        key=lambda x: x["precio"],
-        reverse=True
-    )
+    resultado = []
 
-    return filtradas[:cantidad]
+    while len(resultado) < cantidad and len(filtradas) > 0:
+
+        mayor = filtradas[0]
+
+        for est in filtradas:
+            if est["precio"] > mayor["precio"]:
+                mayor = est
+
+        resultado.append(mayor)
+        filtradas.remove(mayor)
+
+    return resultado
 
 
 def dibujar_mas_caras(datos):
