@@ -2,11 +2,34 @@ import csv
 import streamlit as st
 import matplotlib.pyplot as plt
 
+def leer_datos_csv(ruta):
 
-def leer_datos_csv(ruta: str) -> list[dict]:
-    with open(ruta, newline="", encoding="utf-8") as archivo:
-        lector = csv.DictReader(archivo)
-        dataset = list(lector)
+    archivo = open(ruta)
+
+    encabezados = archivo.readline().strip().split(",")
+
+    datos = []
+
+    linea = archivo.readline()
+
+    while linea != "":
+
+        valores = linea.strip().split(",")
+
+        registro = {}
+
+        i = 0
+        while i < len(encabezados):
+            registro[encabezados[i]] = valores[i]
+            i += 1
+
+        datos.append(registro)
+
+        linea = archivo.readline()
+
+    archivo.close()
+
+    return datos
 
     # Eliminar filas sin coordenadas
     dataset = [
