@@ -42,7 +42,7 @@ def leer_datos_csv(ruta):
 
 #elimina empresas repetidas
 def obtener_estaciones_unicas(estaciones):
-    unicas = 
+    unicas =  []
 #guardamos los idempresa 
     vistos = set()
 #recorre todas las estaciones
