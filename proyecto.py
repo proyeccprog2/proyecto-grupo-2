@@ -4,36 +4,21 @@ import matplotlib.pyplot as plt
 
 def leer_datos_csv(ruta):
 
-    archivo = open(ruta)
+    archivo = open(ruta, encoding="utf-8")
 
-    encabezados = archivo.readline().strip().split(",")
-#aca guardamos los datos
+    lector = csv.DictReader(archivo)
 
     datos = []
 
-    #aca leemos la primera fila del archivo
-    linea = archivo.readline()
-#recorremos todo el archivo
-    while linea != "":
-#separamos por comasss
-        valores = linea.strip().split(",")
+    for fila in lector:
 
-        registro = {}
+        fila["precio"] = float(fila["precio"])
 
-        i = 0
-        #asociamos encabezados del archivo con valoress
-        while i < len(encabezados):
-            registro[encabezados[i]] = valores[i]
-            i += 1
-#siempre guardamos
-        datos.append(registro)
+        datos.append(fila)
 
-        linea = archivo.readline()
-#siempre cerramos el archivo
     archivo.close()
 
     return datos
-
     # eliminamos si hay filas sin coordenadas
     dataset = [fila for fila in dataset
         if fila["latitud"].strip() != ""
