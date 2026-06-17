@@ -2,22 +2,30 @@ import csv
 import streamlit as st
 import matplotlib.pyplot as plt
 def leer_datos_csv(ruta):
-
     archivo = open(ruta, encoding="utf-8")
-
     lector = csv.DictReader(archivo)
-
     datos = []
+    # lista de las columnas que queremos descartar
+    columnas_a_quitar = ["idtipohorario", "tipohorario", "fecha_vigencia", "geojson"]
 
     for fila in lector:
 
         fila["precio"] = float(fila["precio"])
+
+        # creamos un diccionario vacío para ir guardando lo que si nos sirve
+        fila_limpia = {}
+        # revisa cada columna y su valor en la fila actual
+        for clave, valor in fila.items():
+            # si la columna NO es una de las que queremos quitar, la copiamos
+            if clave not in columnas_a_quitar:
+                fila_limpia[clave] = valor
 
         datos.append(fila)
 
     archivo.close()
 
     return datos
+
 ############ elegimos la siguiente funcion para testear porque es una funcion pura, recibe estaciones
 #y devuelve otra lista SIN REPETIR. 
 #elimina empresas repetidas
