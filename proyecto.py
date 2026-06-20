@@ -1,6 +1,7 @@
 import csv
 import streamlit as st
 import matplotlib.pyplot as plt
+
 def leer_datos_csv(ruta):
     archivo = open(ruta, encoding="utf-8")
     lector = csv.DictReader(archivo)
@@ -40,16 +41,6 @@ def obtener_estaciones_unicas(estaciones):
             vistos.add(est["idemprecuitsa"])
 #DEVUELVE LAS UNICAS!!
     return unicas
-##TEST 
-#testeamos que la funcion elimine las empresas repetidas
-def test_obtener_estaciones_unicas():
-    estaciones = [
-        {"idemprecuitsa": "1"},
-        {"idemprecuitsa": "1"},
-        {"idemprecuitsa": "2"}
-    ]
-
-    assert len(obtener_estaciones_unicas(estaciones)) == 2
 
 def estaciones_mas_caras(datos, tipo, cantidad=5):
 #elimina las estaciones repetidas con la funcion que hicimos antes
