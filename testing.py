@@ -1,4 +1,4 @@
-from proyecto import obtener_estaciones_unicas, filtrar_estaciones_por_provincia
+from proyecto import obtener_estaciones_unicas, filtrar_estaciones_por_provincia, contar_marcas_por_provincia, obtener_precio_mas_barato
 
 def test_obtener_estaciones_unicas():
     '''Testeamos que la función elimine las empresas repetidas'''
@@ -34,3 +34,37 @@ def test_filtrar_estaciones_por_provincia():
 
     assert filtrar_estaciones_por_provincia(estaciones, "Santa Fe") == [{"lat":-32.9466, "lon":-60.6395},
                                                                          {"lat":-33.7456, "lon":-61.9688}]
+
+def test_contar_marcas_por_provincia():
+    estaciones = [
+        {"empresa": "YPF"},
+        {"empresa": "YPF"},
+        {"empresa": "Shell"},
+        {"empresa": "Axion"},
+        {"empresa": "Shell"}
+    ]
+
+    resultado = contar_marcas_por_provincia(estaciones)
+
+    assert resultado == {
+        "YPF": 2,
+        "Shell": 2,
+        "Axion": 1
+    }
+
+def test_obtener_precio_mas_barato():
+    estaciones = [
+        {"provincia": "Santa Fe", "producto": "GNC", "precio": 500, "empresa": "YPF", "localidad": "Rosario"},
+        {"provincia": "Santa Fe", "producto": "GNC", "precio": 450, "empresa": "Shell", "localidad": "Santa Fe"},
+        {"provincia": "Santa Fe", "producto": "NAFTA", "precio": 700, "empresa": "Axion", "localidad": "Rosario"}
+    ]
+
+    resultado = obtener_precio_mas_barato(estaciones, "Santa Fe", "GNC")
+
+    assert resultado == {
+        "combustible": "GNC",
+        "provincia": "Santa Fe",
+        "empresa": "Shell",
+        "localidad": "Santa Fe",
+        "precio": 450
+    }
