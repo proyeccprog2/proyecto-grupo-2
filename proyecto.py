@@ -2,6 +2,7 @@ import csv
 import streamlit as st
 import matplotlib.pyplot as plt
 
+
 def leer_datos_csv(ruta):
     '''
     Diseño de datos:
@@ -36,14 +37,72 @@ def leer_datos_csv(ruta):
             if clave not in columnas_a_quitar:
                 fila_limpia[clave] = valor
 
-        datos.append(fila)
+        datos.append(fila_limpia)
 
     archivo.close()
     return datos
+#definimos una funcion general para filtrar estaciones
+#sirve para filtrar por provincia, por combustible o por ambas cosas a la vez
+#definimos una funcion que recibe los datos del csv y una provincia ELEGIDA
+def filtrar_estaciones_por_provincia(datos: list[dict], provincia: str) -> list[dict]:
+    '''
+    Propósito:
+    filtra las estaciones de GNC pertenecientes a una provincia
+    y devuelve sus coordenadas para ser utilizadas en el mapa.
 
+
+    Ejemplo:
+    filtrar_estaciones_por_provincia(datos,"BUENOS AIRES") =
+    [{"lat":-35.1234,"lon":-58.5678}, ...]
+    '''
+    resultado = []
+    for fila in datos:
+        if fila["producto"] == "GNC" and fila["provincia"] == provincia:
+            resultado.append({
+                "lat": float(fila["latitud"]),
+                "lon": float(fila["longitud"])
+            })
+    return resultado
+
+def filtrar_estaciones(estaciones: list[dict], provincia=None, combustible=None) -> list[dict]:
+    '''
+    Propósito:
+    filtra estaciones según provincia y/o combustible.
+
+    Si provincia tiene valor, solo deja las estaciones de esa provincia.
+    Si combustible tiene valor, solo deja las estaciones de ese combustible.
+    Si ambos tienen valor, deben cumplirse las dos condiciones.
+
+    Ejemplos:
+    filtrar_estaciones(datos, provincia="BUENOS AIRES")
+    filtrar_estaciones(datos, combustible="GNC")
+    filtrar_estaciones(datos, provincia="BUENOS AIRES", combustible="GNC")
+    '''
+    #creamos una lista vacia donde vamos a guardar las estaciones que cumplan
+    resultado = []
+
+    #recorremos todas las estaciones
+    for estacion in estaciones:
+        #suponemos que la estacion cumple
+        cumple = True
+
+        #si nos pasaron una provincia, verificamos que coincida
+        if provincia != None and estacion["provincia"] != provincia:
+            cumple = False
+
+        #si nos pasaron un combustible, verificamos que coincida
+        if combustible != None and estacion["producto"] != combustible:
+            cumple = False
+
+        #si cumplio todas las condiciones, la guardamos
+        if cumple:
+            resultado.append(estacion)
+
+    #devolvemos la lista filtrada
+    return resultado
 ############ elegimos la siguiente funcion para testear porque es una funcion pura, recibe estaciones
-#y devuelve otra lista SIN REPETIR. 
-#elimina empresas repetidas
+# y devuelve otra lista SIN REPETIR.
+# elimina empresas repetidas
 def obtener_estaciones_unicas(estaciones):
     '''
     Diseño de datos:
@@ -62,13 +121,79 @@ def obtener_estaciones_unicas(estaciones):
     unicas = []
     # guardamos los idemprecuitsa
     vistos = set()
-    #recorre todas las estaciones
+    # recorre todas las estaciones
     for est in estaciones:
         if est["idemprecuitsa"] not in vistos:
             unicas.append(est)
             vistos.add(est["idemprecuitsa"])
-    #DEVUELVE LAS UNICAS!!
+    # DEVUELVE LAS UNICAS!!
     return unicas
+
+
+######### Se puede testear
+def obtener_campos_unicos(estaciones: list[dict], columna: str) -> list[str]:
+    '''
+    Propósito:
+    obtiene todos los valores únicos de una columna del dataset.
+
+    Ejemplo:
+    obtener_campos_unicos(estaciones,"provincia") =
+    ["BUENOS AIRES",
+    "CATAMARCA",
+    "CHACO",
+    "CHUBUT",
+    ...]
+    '''
+    resultado = set()
+    for estacion in estaciones:
+        resultado.add(estacion[columna])
+    return list(resultado)
+
+# definimos una funcion general que obtiene las estaciones mas baratas o mas caras
+def obtener_top_por_precio(estaciones: list[dict], cantidad: int, mas_baratas: bool) -> list[dict]:
+    '''
+    Propósito:
+    devuelve una lista con las estaciones mas baratas o mas caras
+    segun el valor de mas_baratas.
+
+    Si mas_baratas es True -> devuelve las mas baratas
+    Si mas_baratas es False -> devuelve las mas caras
+
+    Ejemplo:
+    obtener_top_por_precio(estaciones, 3, True) = [3 estaciones mas baratas]
+    obtener_top_por_precio(estaciones, 5, False) = [5 estaciones mas caras]
+    '''
+    # hacemos una copia de la lista para no modificar la original
+    estaciones_restantes = []
+    for estacion in estaciones:
+        estaciones_restantes.append(estacion)
+
+    resultado = []
+
+    # mientras no tengamos la cantidad pedida y todavia queden estaciones
+    while len(resultado) < cantidad and len(estaciones_restantes) > 0:
+        # suponemos que la primera es la mejor candidata
+        elegida = estaciones_restantes[0]
+
+        # recorremos todas las estaciones restantes buscando una mejor
+        for estacion in estaciones_restantes:
+            # si queremos las mas baratas, buscamos el menor precio
+            if mas_baratas:
+                if estacion["precio"] < elegida["precio"]:
+                    elegida = estacion
+            # si queremos las mas caras, buscamos el mayor precio
+            else:
+                if estacion["precio"] > elegida["precio"]:
+                    elegida = estacion
+
+        # guardamos la estacion encontrada
+        resultado.append(elegida)
+
+        # la eliminamos para no repetirla
+        estaciones_restantes.remove(elegida)
+
+    return resultado
+
 
 def estaciones_mas_caras(datos, tipo, cantidad=5):
     '''
@@ -88,49 +213,32 @@ def estaciones_mas_caras(datos, tipo, cantidad=5):
     Ejemplo:
     estaciones_mas_caras(datos, "GNC", 5) = [{"empresa":"YPF","precio":1500.0,...}]
     '''
-    #elimina las estaciones repetidas con la funcion que hicimos antes
-    datos = obtener_estaciones_unicas(datos)
+    # elimina las estaciones repetidas
+    datos_unicos = obtener_estaciones_unicas(datos)
 
-    filtradas = []
-    #recorre todas las estacionessss
-    for est in datos:
-        #busca DEPENDIENDO EL COMBUSTIBLE QUE LE PIDAS
-        if str(est["producto"]).upper() == tipo.upper():
-            filtradas.append(est)
+    # filtramos solo las estaciones del combustible elegido
+    filtradas = filtrar_estaciones(datos_unicos, combustible=tipo)
 
-    resultado = []
-    #mientras no tenga 5
-    while len(resultado) < cantidad and len(filtradas) > 0:
-        #suponemos que la primera es la mas cara
-        mayor = filtradas[0]
-        #tratamos de encontrar una mas cara
-        for est in filtradas:
-            if est["precio"] > mayor["precio"]:
-                mayor = est
-
-        resultado.append(mayor)
-        filtradas.remove(mayor)
-
-    return resultado
+    # usamos la funcion general para obtener las mas caras
+    return obtener_top_por_precio(filtradas, cantidad, False)
 
 
 def dibujar_mas_caras(datos):
-
-    st.subheader("top 5 estaciones mas caras de GNC")
+    st.subheader("Top 5 estaciones más caras de GNC")
 
     top5 = estaciones_mas_caras(datos, "GNC")
 
-#si no encontro ninguna
+    # si no encontró ninguna
     if len(top5) == 0:
-        st.error("no se encontraron estaciones de GNC.")
+        st.error("No se encontraron estaciones de GNC.")
         return
 
     nombres = []
     precios = []
-    #GUARDA TODOO, NOMBRE Y PROVINCIA Y MAS ABAJO PRECIO
+
+    # guarda nombre y provincia
     for est in top5:
-        nombres.append(
-            f"{est['empresa']} ({est['provincia']})")
+        nombres.append(f"{est['empresa']} ({est['provincia']})")
         precios.append(est["precio"])
 
     fig, ax = plt.subplots()
@@ -144,62 +252,7 @@ def dibujar_mas_caras(datos):
     plt.tight_layout()
 
     st.pyplot(fig)
-#definimos una funcion que recibe los datos del csv y una provincia ELEGIDA
-def filtrar_estaciones_por_provincia(datos: list[dict], provincia: str) -> list[dict]:
-    '''
-    Propósito:
-    filtra las estaciones de GNC pertenecientes a una provincia
-    y devuelve sus coordenadas para ser utilizadas en el mapa.
 
-    Ejemplo:
-    filtrar_estaciones_por_provincia(datos,"BUENOS AIRES") =
-    [{"lat":-35.1234,"lon":-58.5678}, ...]
-    '''
-    resultado = []
-    for fila in datos:
-        if fila["producto"] == "GNC" and fila["provincia"] == provincia:
-            resultado.append({
-                "lat": float(fila["latitud"]),
-                "lon": float(fila["longitud"])
-            })
-    return resultado
-
-def obtener_campos_unicos(estaciones: list[dict], columna: str) -> list[str]:
-    '''
-    :
-    obtiene todos los valores únicos de una columna del dataset.
-
-    Ejemplo:
-    obtener_campos_unicos(estaciones,"provincia") =
-    ["BUENOS AIRES",
-    "CATAMARCA",
-    "CHACO",
-    "CHUBUT",
-    ...]
-    '''
-    resultado = set()
-    for estacion in estaciones:
-        resultado.add(estacion[columna])
-    return list(resultado)
-    
-def filtrar_por_provincia_combustible(estaciones: list[dict], provincia: str, combustible: str) -> list[dict]:
-    '''
-    Propósito:
-    filtra las estaciones que pertenecen a una provincia y venden
-    el combustible indicado.
-
-    Ejemplo:
-    filtrar_por_provincia_combustible(estaciones, "BUENOS AIRES", "GNC") =
-    [{"empresa":"BLESER S.R.L.",
-    "provincia":"BUENOS AIRES",
-    "producto":"GNC",
-    ...}]
-    '''
-    estaciones_filtradas = []
-    for estacion in estaciones:
-        if (estacion["provincia"] == provincia and estacion["producto"] == combustible):
-            estaciones_filtradas.append(estacion)
-    return estaciones_filtradas
 
 def obtener_estacion_barata(estaciones: list[dict], provincia: str, combustible: str) -> list[dict]:
     '''
@@ -213,26 +266,22 @@ def obtener_estacion_barata(estaciones: list[dict], provincia: str, combustible:
     "lon":-58.5678,
     "localidad":"LA PLATA"}]
     '''
-    estaciones_filtradas = filtrar_por_provincia_combustible(estaciones, provincia, combustible)
-    resultado = []
+    # filtramos por provincia y combustible
+    estaciones_filtradas = filtrar_estaciones(estaciones, provincia, combustible)
+    # si no hay estaciones devolvemos lista vacia
+    if not estaciones_filtradas:
+        return []
 
-    if estaciones_filtradas:
-        precio = estaciones_filtradas[0]["precio"]
-        estacion_barata = estaciones_filtradas[0]
-        estacion_barata = {"lat": float(estaciones_filtradas[0]["latitud"]),
-                           "lon": float(estaciones_filtradas[0]["longitud"]),
-                           "localidad": estaciones_filtradas[0]["localidad"]}
+    # obtenemos la estacion mas barata usando la funcion general
+    estacion_barata = obtener_top_por_precio(estaciones_filtradas, 1, True)[0]
 
-        for estacion in estaciones_filtradas[1:]:
-            if estacion["precio"] < precio:
-                precio = estacion["precio"]
-                estacion_barata = {"lat": float(estacion["latitud"]),
-                                   "lon": float(estacion["longitud"]),
-                                   "localidad": estacion["localidad"]}
+    # devolvemos el formato que necesita el mapa
+    return [{
+        "lat": float(estacion_barata["latitud"]),
+        "lon": float(estacion_barata["longitud"]),
+        "localidad": estacion_barata["localidad"]
+    }]
 
-        resultado.append(estacion_barata)
-
-    return resultado
 
 def dibujar_mapa(datos: list[dict]):
     st.title("Estaciones de GNC en Argentina")
@@ -244,77 +293,45 @@ def dibujar_mapa(datos: list[dict]):
         key="visibility"
     )
 
-    # y recorremos todas las filas tomando unicamente las provincias que tienen estaciones de gnc
-    #usamos "sorted()" para que aparezcan ordenadas alfabeticamente
-    #selectbox
+    # selectbox de provincias
     provincias = sorted(obtener_campos_unicos(datos, "provincia"))
-    provincia_elegida = st.sidebar.selectbox("Porfavor seleccioná una provincia", provincias)
+    provincia_elegida = st.sidebar.selectbox("Por favor seleccioná una provincia", provincias)
 
     if opcion == "Mapa de GNC":
-        # Mapa visualizando las estaciones de GNC de la provincia seleccionada
+        # mapa visualizando las estaciones de GNC de la provincia seleccionada
         st.subheader(f"Estaciones de GNC en {provincia_elegida}")
         estaciones_en_mapa = filtrar_estaciones_por_provincia(datos, provincia_elegida)
-        #si encontre las estaciones, vamos a dibujar el mapita
+
+        # si encontré estaciones, dibujo el mapa
         if estaciones_en_mapa:
             st.map(estaciones_en_mapa)
-            #pero si no hay datos mostramos una advertencia
         else:
-            # Si no se encuentran estaciones se muestra una advertencia y se muestra el mapa general de argentina
+            # si no hay estaciones, mostramos advertencia y un mapa general
             st.warning("No se encontraron estaciones para esta provincia")
-            default = [{"lat":-38.416097, "lon": -63.616672}] # Centro de Argentina
-            st.map(data = default, color = "#00000000", zoom = 3) # El color usado es 100% transparente
-            
+            default = [{"lat": -38.416097, "lon": -63.616672}]  # centro de Argentina
+            st.map(data=default, color="#00000000", zoom=3)
+
     elif opcion == "Ciudad más barata":
         combustibles = sorted(obtener_campos_unicos(datos, "producto"))
-        combustible_elegido = st.sidebar.selectbox("Porfavor seleccioná el tipo de combustible", combustibles)
+        combustible_elegido = st.sidebar.selectbox("Por favor seleccioná el tipo de combustible", combustibles)
 
-        # Mapa visualizando la estación con el precio más barato del combustible y la provincia elegidos
+        # mapa visualizando la estación con el precio más barato
         estacion_barata = obtener_estacion_barata(datos, provincia_elegida, combustible_elegido)
-        # si encuentra las estaciones, vamos a dibujar el mapita
+
         if estacion_barata:
-            st.subheader(f"La estación de '{combustible_elegido}' más barata en {provincia_elegida}, está en la localidad de {estacion_barata[0]["localidad"]}")
+            st.subheader(
+                f"La estación de '{combustible_elegido}' más barata en {provincia_elegida}, "
+                f"está en la localidad de {estacion_barata[0]['localidad']}"
+            )
             st.map(estacion_barata)
         else:
-            # Si no se encuentran estaciones se muestra una advertencia y se muestra el mapa general de argentina
             st.warning(f"No se encontraron estaciones de {combustible_elegido} en {provincia_elegida}")
-            default = [{"lat":-38.416097, "lon": -63.616672}] # Centro de Argentina
-            st.map(data = default, color = "#00000000", zoom = 3) # El color usado es 100% transparente
-
-#definimos una funcion que recibe todos los datos y una provincia
-#devuelve una lista con todas las estaciones de esa provincia, sin importar el combustible
-def filtrar_estaciones_todas_por_provincia(datos: list[dict], provincia: str) -> list[dict]:
-    '''
-    Propósito:
-    devuelve todas las estaciones que pertenecen a la provincia
-    seleccionada.
-
-    Ejemplo:
-    filtrar_estaciones_todas_por_provincia(datos, "BUENOS AIRES") =
-    [{"empresa":"BLESER S.R.L.",
-    "provincia":"BUENOS AIRES",
-    "producto":"GNC",
-    "precio":579.0},
-    {"empresa":"YPF S.A.",
-    "provincia":"BUENOS AIRES",
-    "producto":"GAS OIL GRADO 3",
-    "precio":1329.0
-    ...},
-    ...]
-    '''
-    #creamos una lista vacia donde vamos a guardar las estaciones de la provincia elegida
-    resultado = []
-    #recorremos todas las estaciones del dataset
-    for estacion in datos:
-    #si la provincia de la estacion coincide con la provincia elegida
-        if estacion["provincia"] == provincia:
-    #guardamos esa estacion en la lista resultado
-            resultado.append(estacion)
-    #devolvemos la lista con las estaciones filtradas
-    return resultado
+            default = [{"lat": -38.416097, "lon": -63.616672}]
+            st.map(data=default, color="#00000000", zoom=3)
 
 
-#definimos una funcion que recibe una lista de estaciones de una provincia
-#y cuenta cuantas estaciones tiene cada marca/empresa
+# definimos una funcion que recibe una lista de estaciones de una provincia
+# y cuenta cuantas estaciones tiene cada marca/empresa
 def contar_marcas_por_provincia(estaciones: list[dict]) -> dict:
     '''
     Propósito:
@@ -327,27 +344,31 @@ def contar_marcas_por_provincia(estaciones: list[dict]) -> dict:
     "SHELL":58,
     "AXION":44}
     '''
-#creamos un diccionario vacio donde vamos a guardar:
-#LA clave = marca, valor = cantidad de estaciones de esa marca
+    # creamos un diccionario vacio donde vamos a guardar:
+    # clave = marca, valor = cantidad de estaciones de esa marca
     conteo = {}
 
-#recorremos TODASS las estaciones
+    # recorremos todas las estaciones
     for estacion in estaciones:
-#guardamos en una variable el nombre de la empresa de esa estacion
+        # guardamos en una variable el nombre de la empresa de esa estacion
         marca = estacion["empresa"]
-        #si esa marca ya estaba en el diccionario, le sumamos 1
+
+        # si esa marca ya estaba en el diccionario, le sumamos 1
         if marca in conteo:
             conteo[marca] += 1
         else:
-            #si aparece por primera vez le asignamos el valor 1
+            # si aparece por primera vez le asignamos el valor 1
             conteo[marca] = 1
 
-    #devolvemos el diccionario con el conteo de estaciones por marca
+    # devolvemos el diccionario con el conteo de estaciones por marca
     return conteo
-#encontramos el primer problema, que no podiamos poner TODAS las estaciones por la cantidad que eran
-#se superponian entre si, entonces decidimos cambiar la pregunta a "¿Qué 5 marcas de estaciones de servicio tienen más presencia en una provincia seleccionada?"
-#definimos una funcion que recibe un diccionario con marcas y cantidades
-#se queda con las 5 marcas con mas presencia y agrupa el resto en "Otras"
+
+
+# encontramos el primer problema, que no podiamos poner TODAS las estaciones por la cantidad que eran
+# se superponian entre si, entonces decidimos cambiar la pregunta a
+# "¿Qué 5 marcas de estaciones de servicio tienen más presencia en una provincia seleccionada?"
+# definimos una funcion que recibe un diccionario con marcas y cantidades
+# se queda con las 5 marcas con mas presencia y agrupa el resto en "Otras"
 def top_5_marcas(conteo_marcas: dict) -> dict:
     '''
     Propósito:
@@ -358,43 +379,44 @@ def top_5_marcas(conteo_marcas: dict) -> dict:
     top_5_marcas({"YPF":120,"SHELL":58,"AXION":44,"PUMA":31,"GULF":18,"OTRA":12}) =
     {"YPF":120,"SHELL":58,"AXION":44,"PUMA":31,"GULF":18,"Otras":12}
     '''
-#convertimos el diccionario en una lista de tuplas:
-    #(marca, cantidad)
+    # convertimos el diccionario en una lista de tuplas:
+    # (marca, cantidad)
     marcas = list(conteo_marcas.items())
 
-    #creamos un diccionario vacio donde vamos a guardar el resultado final
+    # creamos un diccionario vacio donde vamos a guardar el resultado final
     resultado = {}
 
-    #mientras no tengamos 5 marcas guardadas y todavia queden marcas por revisar
+    # mientras no tengamos 5 marcas guardadas y todavia queden marcas por revisar
     while len(resultado) < 5 and len(marcas) > 0:
-        #suponemos que la primera marca de la lista es la que mas estaciones tiene
+        # suponemos que la primera marca de la lista es la que mas estaciones tiene
         mayor = marcas[0]
 
-    #recorremos la lista para buscar si hay una marca con mas estaciones
+        # recorremos la lista para buscar si hay una marca con mas estaciones
         for marca in marcas:
             if marca[1] > mayor[1]:
                 mayor = marca
 
-    #guardamos en el resultado la marca con mayor cantidad de estaciones
+        # guardamos en el resultado la marca con mayor cantidad de estaciones
         resultado[mayor[0]] = mayor[1]
 
-    #eliminamos esa marca de la lista para no volver a contarla
+        # eliminamos esa marca de la lista para no volver a contarla
         marcas.remove(mayor)
 
-    #si quedaron marcas afuera del top 5, las sumamos en "Otras"
+    # si quedaron marcas afuera del top 5, las sumamos en "Otras"
     if marcas:
         suma_resto = 0
         for marca, cantidad in marcas:
             suma_resto += cantidad
         resultado["Otras"] = suma_resto
 
-    #devolvemos el diccionario final con top 5 + otras
+    # devolvemos el diccionario final con top 5 + otras
     return resultado
+
 
 def dibujar_grafico_marcas(datos: list[dict]):
     st.subheader("Las 5 marcas con mayor presencia por provincia")
 
-    # RECICLAMOS. usamos estaciones únicas para no contar varias veces la misma estación
+    # usamos estaciones únicas para no contar varias veces la misma estación
     datos_unicos = obtener_estaciones_unicas(datos)
 
     # armamos el selectbox con las provincias
@@ -402,11 +424,11 @@ def dibujar_grafico_marcas(datos: list[dict]):
     provincia_elegida = st.selectbox("Seleccioná una provincia", provincias, key="prov_marcas")
 
     # filtramos las estaciones de la provincia elegida
-    estaciones_provincia = filtrar_estaciones_todas_por_provincia(datos_unicos, provincia_elegida)
+    estaciones_provincia = filtrar_estaciones(datos_unicos, provincia=provincia_elegida)
 
     # si no hay estaciones en esa provincia, mostramos advertencia
     if not estaciones_provincia:
-        st.warning("no hay estaciones en esa provincia")
+        st.warning("No hay estaciones en esa provincia")
         return
 
     # contamos cuantas estaciones tiene cada marca
@@ -434,7 +456,7 @@ def dibujar_grafico_marcas(datos: list[dict]):
         startangle=90
     )
 
-    ax.set_title(f"Distribución de estaciones por marca en {provincia_elegida} (top 5 + otras)")
+    ax.set_title(f"Distribución de estaciones por marca en {provincia_elegida} (Top 5 + Otras)")
 
     # agregamos la leyenda al costado
     ax.legend(
@@ -448,9 +470,10 @@ def dibujar_grafico_marcas(datos: list[dict]):
     plt.tight_layout()
     st.pyplot(fig)
 
+
 # funcion que recibe los datos, una provincia y un combustible
 # devuelve las 5 estaciones con el precio mas barato para esa combinación
-def obtener_5_precios_mas_baratos(datos: list[dict], provincia: str, combustible: str) -> list[dict]:
+def obtener_precio_mas_barato(datos: list[dict], provincia: str, combustible: str) -> list[dict]:
     '''
     Diseño de datos:
     datos: List[diccionario]
@@ -458,7 +481,7 @@ def obtener_5_precios_mas_baratos(datos: list[dict], provincia: str, combustible
     combustible: string
 
     Signatura:
-    obtener_5_precios_mas_baratos:
+    obtener_precio_mas_barato:
     List[diccionario] string string -> List[diccionario]
 
     Propósito:
@@ -466,52 +489,36 @@ def obtener_5_precios_mas_baratos(datos: list[dict], provincia: str, combustible
     y combustible determinados.
 
     Ejemplos:
-    obtener_5_precios_mas_baratos(datos, "BUENOS AIRES","GNC") =
+    obtener_precio_mas_barato(datos, "BUENOS AIRES","GNC") =
     [
         {"combustible":"GNC","provincia":"BUENOS AIRES","empresa":"X","localidad":"LA PLATA","precio":579.0},
-        {"combustible":"GNC","provincia":"BUENOS AIRES","empresa":"Y","localidad":"QUILMES","precio":581.0},
-        ...
+        {"combustible":"GNC","provincia":"BUENOS AIRES","empresa":"Y","localidad":"QUILMES","precio":581.0}
     ]
     '''
-    # lista vacia donde vamos a guardar las estaciones que cumplen el filtro
-    filtradas = []
-
-    # recorremos todo el dataset buscando coincidencias de provincia y combustible
-    for est in datos:
-        if est["provincia"] == provincia and est["producto"] == combustible:
-            filtradas.append(est)
-
-    # si no encontramos ninguna estación que cumpla el filtro, devolvemos lista vacia
+    # filtramos por provincia y combustible
+    filtradas = filtrar_estaciones(datos, provincia, combustible)
+    # si no encontramos estaciones devolvemos lista vacia
     if not filtradas:
         return []
 
+    # obtenemos las 5 estaciones mas baratas
+    top5_baratas = obtener_top_por_precio(filtradas, 5, True)
+
     resultado = []
 
-    # mientras no tengamos 5 resultados y todavia queden estaciones filtradas
-    while len(resultado) < 5 and len(filtradas) > 0:
-        # suponemos que la primera es la mas barata
-        estacion_barata = filtradas[0]
-
-        # recorremos el resto buscando una estacion con menor precio
-        for est in filtradas:
-            if est["precio"] < estacion_barata["precio"]:
-                estacion_barata = est
-
-        # guardamos en resultado solo los datos importantes de la estacion encontrada
+    # armamos la lista con el formato que queremos mostrar en la tabla
+    for estacion in top5_baratas:
         resultado.append({
             "combustible": combustible,
             "provincia": provincia,
-            "empresa": estacion_barata["empresa"],
-            "localidad": estacion_barata["localidad"],
-            "precio": estacion_barata["precio"]
+            "empresa": estacion["empresa"],
+            "localidad": estacion["localidad"],
+            "precio": estacion["precio"]
         })
 
-        # eliminamos esa estacion para no volver a contarla
-        filtradas.remove(estacion_barata)
-
     return resultado
-# funcion encargada de mostrar en Streamlit la estacion mas barata
-# segun la provincia y el combustible seleccionado
+
+
 # funcion encargada de mostrar en Streamlit las 5 estaciones mas baratas
 # segun la provincia y el combustible seleccionado
 def dibujar_precio_mas_barato(datos):
@@ -530,18 +537,19 @@ def dibujar_precio_mas_barato(datos):
     combustible = st.selectbox("Seleccioná un combustible", combustibles, key="comb_barato")
 
     # llamamos a la función que busca las 5 estaciones mas baratas
-    resultados = obtener_5_precios_mas_baratos(datos, provincia, combustible)
+    resultados = obtener_precio_mas_barato(datos, provincia, combustible)
 
     # si no hay datos para esa combinacion, mostramos advertencia
     if not resultados:
-        st.warning("no hay datos para esa selección")
+        st.warning("No hay datos para esa selección")
         return
 
-    # mostramos el precio mas bajo de todos los encontrados
+    # mostramos el precio mas barato de todos los encontrados
     st.success(f"El precio más barato de {combustible} en {provincia} es ${resultados[0]['precio']}")
 
-    # armamos la tabla con las 5 estaciones encontradas
+    # armamos la tabla con las estaciones encontradas
     tabla = []
+
     for resultado in resultados:
         tabla.append({
             "Combustible": resultado["combustible"],
@@ -553,6 +561,8 @@ def dibujar_precio_mas_barato(datos):
 
     # mostramos la tabla en Streamlit
     st.table(tabla)
+
+
 def ordenar_promedios(promedios: list[dict]):
     '''
     Diseño de datos:
@@ -577,17 +587,17 @@ def ordenar_promedios(promedios: list[dict]):
     n = len(promedios)
     for i in range(n):
         for j in range(0, n - i - 1):
-            # Si el precio actual es MENOR al siguiente, los intercambiamos de lugar
-            # (Así los más caros van quedando al principio de la lista)
-            if promedios[j]["precio_promedio"] < promedios[j+1]["precio_promedio"]:
-                # Intercambio de posiciones
+            # si el precio actual es MENOR al siguiente, los intercambiamos
+            # así los más caros van quedando al principio de la lista
+            if promedios[j]["precio_promedio"] < promedios[j + 1]["precio_promedio"]:
                 aux = promedios[j]
-                promedios[j] = promedios[j+1]
-                promedios[j+1] = aux
+                promedios[j] = promedios[j + 1]
+                promedios[j + 1] = aux
 
     return promedios
 
-def obtener_10_promedios_altos(estaciones:list[dict]) -> list[dict]:
+
+def obtener_10_promedios_altos(estaciones: list[dict]) -> list[dict]:
     '''
     Propósito:
     calcula el precio promedio de los combustibles para cada
@@ -613,10 +623,10 @@ def obtener_10_promedios_altos(estaciones:list[dict]) -> list[dict]:
                 "suma_precios": 0,
                 "cantidad": 0
             }
-        
+
         agrupados[id_est]["suma_precios"] += estacion["precio"]
         agrupados[id_est]["cantidad"] += 1
-    
+
     promedios = []
 
     for id_est, info in agrupados.items():
@@ -629,6 +639,7 @@ def obtener_10_promedios_altos(estaciones:list[dict]) -> list[dict]:
     promedios = ordenar_promedios(promedios)
     return promedios[:10]
 
+
 def dibujar_promedios_altos(datos: list[dict]):
     st.subheader("Top 10 estaciones con el precio promedio más alto")
 
@@ -637,14 +648,12 @@ def dibujar_promedios_altos(datos: list[dict]):
     nombres = []
     precios = []
 
-    # Preparamos las listas para el gráfico
+    # preparamos las listas para el gráfico
     for est in top10:
-        # Ponemos un \n para que la ubicación aparezca en el renglón de abajo en el gráfico
         etiqueta = str(est['empresa'])
         nombres.append(etiqueta)
         precios.append(est["precio_promedio"])
 
-    # Agrandamos un poco la figura (figsize) porque son 10 barras con textos largos
     fig, ax = plt.subplots(figsize=(12, 6))
 
     ax.bar(nombres, precios, color='salmon')
@@ -652,15 +661,14 @@ def dibujar_promedios_altos(datos: list[dict]):
     ax.set_ylabel("Precio Promedio ($)")
     ax.set_title("Estaciones más caras del país (Promedio de todos sus combustibles)")
 
-    # Rotamos el texto 45 grados y lo alineamos a la derecha para que no se pisen las palabras
     plt.xticks(rotation=45, ha='right')
-    plt.tight_layout() # Evita que los textos se corten en los bordes
+    plt.tight_layout()
 
     st.pyplot(fig)
 
-def main():
 
-    st.title("combustibles")
+def main():
+    st.title("Combustibles")
 
     datos = leer_datos_csv("precios_surtidor_2024_2025_2026.csv")
     dibujar_mapa(datos)
@@ -668,6 +676,7 @@ def main():
     dibujar_promedios_altos(datos)
     dibujar_grafico_marcas(datos)
     dibujar_precio_mas_barato(datos)
+
 
 if __name__ == "__main__":
     main()
