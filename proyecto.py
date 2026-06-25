@@ -3,36 +3,64 @@ import streamlit as st
 import matplotlib.pyplot as plt
 
 def leer_datos_csv(ruta):
+    '''
+    Diseño de datos:
+    ruta: string
+
+    Signatura:
+    leer_datos_csv: str -> list[dict]
+
+    Propósito:
+    lee un archivo CSV con información de estaciones de servicio,
+    convierte el campo precio a float y devuelve una lista de
+    diccionarios con los datos.
+
+    Ejemplo:
+    leer_datos_csv("precios_surtidor_2024_2025_2026.csv") =
+    [{"empresa":"BLESER S.R.L.",
+    "provincia":"BUENOS AIRES",
+    "producto":"GNC",
+    "precio":579.0,
+    ...}]
+    '''
     archivo = open(ruta, encoding="utf-8")
     lector = csv.DictReader(archivo)
     datos = []
-    # lista de las columnas que queremos descartar
     columnas_a_quitar = ["idtipohorario", "tipohorario", "fecha_vigencia", "geojson"]
 
     for fila in lector:
-
         fila["precio"] = float(fila["precio"])
 
-        # creamos un diccionario vacío para ir guardando lo que si nos sirve
         fila_limpia = {}
-        # revisa cada columna y su valor en la fila actual
         for clave, valor in fila.items():
-            # si la columna NO es una de las que queremos quitar, la copiamos
             if clave not in columnas_a_quitar:
                 fila_limpia[clave] = valor
 
         datos.append(fila)
 
     archivo.close()
-
     return datos
 
 ############ elegimos la siguiente funcion para testear porque es una funcion pura, recibe estaciones
 #y devuelve otra lista SIN REPETIR. 
 #elimina empresas repetidas
 def obtener_estaciones_unicas(estaciones):
-    unicas =  []
-    #guardamos los idemprecuitsa
+    '''
+    Diseño de datos:
+    estaciones: List[dict]
+
+    Signatura:
+    obtener_estaciones_unicas: List[dict] -> List[dict]
+
+    Propósito:
+    recibe una lista de estaciones y devuelve otra lista sin
+    repeticiones según el campo idemprecuitsa.
+
+    Ejemplo:
+    obtener_estaciones_unicas(estaciones) = [{"idemprecuitsa":"1"}, {"idemprecuitsa":"2"}]
+    '''
+    unicas = []
+    # guardamos los idemprecuitsa
     vistos = set()
     #recorre todas las estaciones
     for est in estaciones:
@@ -43,6 +71,23 @@ def obtener_estaciones_unicas(estaciones):
     return unicas
 
 def estaciones_mas_caras(datos, tipo, cantidad=5):
+    '''
+    Diseño de datos:
+    datos: List[dict]
+    tipo: string
+    cantidad: int
+
+    Signatura:
+    estaciones_mas_caras:
+    List[diccionario] string int -> List[diccionario]
+
+    Propósito:
+    obtiene las estaciones con el precio más alto para el tipo
+    de combustible indicado.
+
+    Ejemplo:
+    estaciones_mas_caras(datos, "GNC", 5) = [{"empresa":"YPF","precio":1500.0,...}]
+    '''
     #elimina las estaciones repetidas con la funcion que hicimos antes
     datos = obtener_estaciones_unicas(datos)
 
@@ -101,33 +146,55 @@ def dibujar_mas_caras(datos):
     st.pyplot(fig)
 #definimos una funcion que recibe los datos del csv y una provincia ELEGIDA
 def filtrar_estaciones_por_provincia(datos: list[dict], provincia: str) -> list[dict]:
-    """
-    recibe un dataset y transforma los datos de las coordenadas en geoposionamineto para luego poder usarlo
-    en el mapa
-    """
-    #creamos una lista vacia para luego guardar los datos que nos interesa
+    '''
+    Propósito:
+    filtra las estaciones de GNC pertenecientes a una provincia
+    y devuelve sus coordenadas para ser utilizadas en el mapa.
+
+    Ejemplo:
+    filtrar_estaciones_por_provincia(datos,"BUENOS AIRES") =
+    [{"lat":-35.1234,"lon":-58.5678}, ...]
+    '''
     resultado = []
-    #recorremos todas las filas del dataset y nos frenamos unicamente en las que venden GNC y verificamos que
-    #aparezcan en la provincia SELECCIONADA
     for fila in datos:
         if fila["producto"] == "GNC" and fila["provincia"] == provincia:
-    #AGREGO LAS CORDENADAS A LA LISTA RESULTADO
-    #USAMOS FLOAT PORQUE EN EL CSV VIENEN COMO TEXTO Y PARA EL MAPA VAMOS A NECESITAR NUMEROS          
             resultado.append({
                 "lat": float(fila["latitud"]),
                 "lon": float(fila["longitud"])
             })
-    #DEVUELVO LA LISTA CON TODAS LAS COORDENADAS ENCONTRADAS
     return resultado
 
 def obtener_campos_unicos(estaciones: list[dict], columna: str) -> list[str]:
+    '''
+    :
+    obtiene todos los valores únicos de una columna del dataset.
+
+    Ejemplo:
+    obtener_campos_unicos(estaciones,"provincia") =
+    ["BUENOS AIRES",
+    "CATAMARCA",
+    "CHACO",
+    "CHUBUT",
+    ...]
+    '''
     resultado = set()
     for estacion in estaciones:
         resultado.add(estacion[columna])
     return list(resultado)
     
 def filtrar_por_provincia_combustible(estaciones: list[dict], provincia: str, combustible: str) -> list[dict]:
-    
+    '''
+    Propósito:
+    filtra las estaciones que pertenecen a una provincia y venden
+    el combustible indicado.
+
+    Ejemplo:
+    filtrar_por_provincia_combustible(estaciones, "BUENOS AIRES", "GNC") =
+    [{"empresa":"BLESER S.R.L.",
+    "provincia":"BUENOS AIRES",
+    "producto":"GNC",
+    ...}]
+    '''
     estaciones_filtradas = []
     for estacion in estaciones:
         if (estacion["provincia"] == provincia and estacion["producto"] == combustible):
@@ -135,6 +202,17 @@ def filtrar_por_provincia_combustible(estaciones: list[dict], provincia: str, co
     return estaciones_filtradas
 
 def obtener_estacion_barata(estaciones: list[dict], provincia: str, combustible: str) -> list[dict]:
+    '''
+    Propósito:
+    busca la estación más barata para una provincia y combustible
+    determinados y devuelve su ubicación.
+
+    Ejemplo:
+    obtener_estacion_barata(estaciones,"BUENOS AIRES","GNC") =
+    [{"lat":-35.1234,
+    "lon":-58.5678,
+    "localidad":"LA PLATA"}]
+    '''
     estaciones_filtradas = filtrar_por_provincia_combustible(estaciones, provincia, combustible)
     resultado = []
 
@@ -205,6 +283,24 @@ def dibujar_mapa(datos: list[dict]):
 #definimos una funcion que recibe todos los datos y una provincia
 #devuelve una lista con todas las estaciones de esa provincia, sin importar el combustible
 def filtrar_estaciones_todas_por_provincia(datos: list[dict], provincia: str) -> list[dict]:
+    '''
+    Propósito:
+    devuelve todas las estaciones que pertenecen a la provincia
+    seleccionada.
+
+    Ejemplo:
+    filtrar_estaciones_todas_por_provincia(datos, "BUENOS AIRES") =
+    [{"empresa":"BLESER S.R.L.",
+    "provincia":"BUENOS AIRES",
+    "producto":"GNC",
+    "precio":579.0},
+    {"empresa":"YPF S.A.",
+    "provincia":"BUENOS AIRES",
+    "producto":"GAS OIL GRADO 3",
+    "precio":1329.0
+    ...},
+    ...]
+    '''
     #creamos una lista vacia donde vamos a guardar las estaciones de la provincia elegida
     resultado = []
     #recorremos todas las estaciones del dataset
@@ -220,6 +316,17 @@ def filtrar_estaciones_todas_por_provincia(datos: list[dict], provincia: str) ->
 #definimos una funcion que recibe una lista de estaciones de una provincia
 #y cuenta cuantas estaciones tiene cada marca/empresa
 def contar_marcas_por_provincia(estaciones: list[dict]) -> dict:
+    '''
+    Propósito:
+    cuenta cuántas estaciones posee cada empresa dentro de una
+    provincia.
+
+    Ejemplo:
+    contar_marcas_por_provincia(estaciones) =
+    {"YPF":120,
+    "SHELL":58,
+    "AXION":44}
+    '''
 #creamos un diccionario vacio donde vamos a guardar:
 #LA clave = marca, valor = cantidad de estaciones de esa marca
     conteo = {}
@@ -242,6 +349,15 @@ def contar_marcas_por_provincia(estaciones: list[dict]) -> dict:
 #definimos una funcion que recibe un diccionario con marcas y cantidades
 #se queda con las 5 marcas con mas presencia y agrupa el resto en "Otras"
 def top_5_marcas(conteo_marcas: dict) -> dict:
+    '''
+    Propósito:
+    obtiene las cinco marcas con mayor cantidad de estaciones y
+    agrupa el resto en la categoría "Otras".
+
+    Ejemplo:
+    top_5_marcas({"YPF":120,"SHELL":58,"AXION":44,"PUMA":31,"GULF":18,"OTRA":12}) =
+    {"YPF":120,"SHELL":58,"AXION":44,"PUMA":31,"GULF":18,"Otras":12}
+    '''
 #convertimos el diccionario en una lista de tuplas:
     #(marca, cantidad)
     marcas = list(conteo_marcas.items())
@@ -335,6 +451,28 @@ def dibujar_grafico_marcas(datos: list[dict]):
 # funcion que recibe los datos, una provincia y un combustible
 # devuelve la estacion con el precio mas barato para esa combinación
 def obtener_precio_mas_barato(datos: list[dict], provincia: str, combustible: str):
+    '''
+    Diseño de datos:
+    datos: List[diccionario]
+    provincia: string
+    combustible: string
+
+    Signatura:
+    obtener_precio_mas_barato:
+    List[diccionario] string string -> diccionario
+
+    Propósito:
+    busca la estación con el precio más barato para una provincia
+    y combustible determinados.
+
+    Ejemplos:
+    obtener_precio_mas_barato(datos, "BUENOS AIRES","GNC") =
+    {"combustible":"GNC",
+    "provincia":"BUENOS AIRES",
+    "empresa":"BLESER S.R.L.",
+    "localidad":"LA PLATA",
+    "precio":579.0}
+    '''
     # lista vacia donde vamos a guardar las estaciones que cumplen el filtro
     filtradas = []
     # recorremos todo el dataset buscando coincidencias de provincia y combustible
@@ -405,6 +543,26 @@ def dibujar_precio_mas_barato(datos):
     st.table(tabla)
 
 def ordenar_promedios(promedios: list[dict]):
+    '''
+    Diseño de datos:
+    promedios: List[dict]
+
+    Signatura:
+    ordenar_promedios:
+    List[diccionario] -> List[diccionario]
+
+    Propósito:
+    ordena una lista de estaciones según su precio promedio
+    de mayor a menor
+
+    Ejemplo:
+    ordenar_promedios([{"empresa":"YPF","precio_promedio":1200.0},
+    {"empresa":"SHELL","precio_promedio":1500.0},
+    {"empresa":"AXION","precio_promedio":1300.0}]) =
+    [{"empresa":"SHELL","precio_promedio":1500.0},
+    {"empresa":"AXION","precio_promedio":1300.0},
+    {"empresa":"YPF","precio_promedio":1200.0}]
+    '''
     n = len(promedios)
     for i in range(n):
         for j in range(0, n - i - 1):
@@ -419,6 +577,20 @@ def ordenar_promedios(promedios: list[dict]):
     return promedios
 
 def obtener_10_promedios_altos(estaciones:list[dict]) -> list[dict]:
+    '''
+    Propósito:
+    calcula el precio promedio de los combustibles para cada
+    estación de servicio y devuelve las 10 estaciones con los
+    promedios más altos
+
+    Ejemplo:
+    obtener_10_promedios_altos(estaciones) =
+    [{"empresa":"YPF","precio_promedio":1450.0},
+    {"empresa":"SHELL","precio_promedio":1420.0},
+    {"empresa":"AXION","precio_promedio":1385.0},
+    ...
+    ]
+    '''
     agrupados = {}
 
     for estacion in estaciones:
