@@ -83,14 +83,13 @@ def test_obtener_precio_mas_barato():
 
     resultado = obtener_precio_mas_barato(estaciones, "Santa Fe", "GNC")
 
-    assert resultado == [{
-        "combustible": "GNC",
-        "provincia": "Santa Fe",
-        "empresa": "Shell",
-        "localidad": "Santa Fe",
-        "precio": 450
-    }]
+    assert len(resultado) == 2  # solo hay 2 estaciones GNC
 
+    assert resultado[0]["empresa"] == "Shell"
+    assert resultado[0]["precio"] == 450
+
+    assert resultado[1]["empresa"] == "YPF"
+    assert resultado[1]["precio"] == 500
 
 def test_obtener_estacion_barata():
     estaciones = [

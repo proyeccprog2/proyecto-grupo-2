@@ -64,43 +64,25 @@ def filtrar_estaciones_por_provincia(datos: list[dict], provincia: str) -> list[
             })
     return resultado
 
-def filtrar_estaciones(estaciones: list[dict], provincia=None, combustible=None) -> list[dict]:
-    '''
-    Propósito:
-    filtra estaciones según provincia y/o combustible.
-
-    Si provincia tiene valor, solo deja las estaciones de esa provincia.
-    Si combustible tiene valor, solo deja las estaciones de ese combustible.
-    Si ambos tienen valor, deben cumplirse las dos condiciones.
-
-    Ejemplos:
-    filtrar_estaciones(datos, provincia="BUENOS AIRES")
-    filtrar_estaciones(datos, combustible="GNC")
-    filtrar_estaciones(datos, provincia="BUENOS AIRES", combustible="GNC")
-    '''
-    #creamos una lista vacia donde vamos a guardar las estaciones que cumplan
+def filtrar_estaciones(estaciones, provincia=None, combustible=None):
     resultado = []
 
-    #recorremos todas las estaciones
     for estacion in estaciones:
-        #suponemos que la estacion cumple
         cumple = True
 
-        #si nos pasaron una provincia, verificamos que coincida
-        if provincia != None and estacion["provincia"] != provincia:
-            cumple = False
+        if provincia is not None:
+            if estacion["provincia"].strip().lower() != provincia.strip().lower():
+                cumple = False
 
-        #si nos pasaron un combustible, verificamos que coincida
-        if combustible != None and estacion["producto"] != combustible:
-            cumple = False
+        if combustible is not None:
+            if estacion["producto"].strip().lower() != combustible.strip().lower():
+                cumple = False
 
-        #si cumplio todas las condiciones, la guardamos
         if cumple:
             resultado.append(estacion)
 
-    #devolvemos la lista filtrada
     return resultado
-############ elegimos la siguiente funcion para testear porque es una funcion pura, recibe estaciones
+########### elegimos la siguiente funcion para testear porque es una funcion pura, recibe estaciones
 # y devuelve otra lista SIN REPETIR.
 # elimina empresas repetidas
 def obtener_estaciones_unicas(estaciones):
