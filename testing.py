@@ -1,4 +1,4 @@
-from proyecto import obtener_estaciones_unicas, filtrar_estaciones_por_provincia, contar_marcas_por_provincia, obtener_precio_mas_barato
+from proyecto import obtener_estaciones_unicas, filtrar_estaciones_por_provincia, contar_marcas_por_provincia, obtener_precio_mas_barato, obtener_estacion_barata, filtrar_por_provincia_combustible, obtener_campos_unicos
 
 def test_obtener_estaciones_unicas():
     '''Testeamos que la función elimine las empresas repetidas'''
@@ -68,3 +68,37 @@ def test_obtener_precio_mas_barato():
         "localidad": "Santa Fe",
         "precio": 450
     }
+
+def filtrar_por_provincia_combustible():
+    estaciones = [{"idemprecuitsa":1, "provincia": "Santa Fe", "producto":"GNC"},
+                   {"idemprecuitsa":2, "provincia": "Santa Fe", "producto":"GNC"},
+                   {"idemprecuitsa":3, "provincia": "Santa Fe", "producto":"Nafta (Super)"},
+                   {"idemprecuitsa":4, "provincia": "Buenos Aires", "producto": "Nafta (Super)"}]
+
+    assert filtrar_por_provincia_combustible(estaciones, "Santa Fe", "GNC") == [{"idemprecuitsa":1, "provincia": "Santa Fe", "producto":"GNC"},
+                                                                                {"idemprecuitsa":2, "provincia": "Santa Fe", "producto":"GNC"}]
+    assert filtrar_por_provincia_combustible(estaciones, "Santa Fe", "Nafta (Super)") == [{"idemprecuitsa":3, "provincia": "Santa Fe", "producto":"Nafta (Super)"}]
+    assert filtrar_por_provincia_combustible(estaciones, "Buenos Aires", "GNC") == []
+
+def test_obtener_estacion_barata():
+    estaciones = [{"provincia": "Santa Fe", "producto":"GNC", "localidad": "Rosario", "precio":45800, "latitud": "-30.78", "longitud": "-31.45"},
+                   {"provincia": "Santa Fe", "producto":"GNC", "localidad": "Santa Fe", "precio":40450,"latitud": "-30.45", "longitud": "-31.77"},
+                   {"provincia": "Santa Fe", "producto":"Nafta (Super)", "localidad": "Venado Tuerto", "precio":3050,"latitud": "-30.10", "longitud": "-31.12"},
+                   {"provincia": "Buenos Aires", "producto": "Nafta (Super)", "localidad": "Santa Fe", "precio":3500,"latitud": "-30.10", "longitud": "-31.12"}]
+
+    assert obtener_estacion_barata(estaciones, "Santa Fe", "GNC") == [{"lat": -30.45, "lon": -31.77, "localidad": "Santa Fe"}]
+    assert obtener_estacion_barata(estaciones, "Santa Fe", "Nafta (Super)") == [{"lat": -30.10, "lon": -31.12, "localidad": "Venado Tuerto"}]
+    assert obtener_estacion_barata(estaciones, "Catamarca", "Nafta (Super)") == []
+
+def test_obtener_campos_unicos():
+    estaciones = [{"provincia": "Santa Fe", "producto": "GNC", "idempresa": 1},
+                  {"provincia": "Buenos Aires", "producto": "GNC", "idempresa": 2},
+                  {"provincia": "Buenos Aires", "producto": "Nafta (Super)", "idempresa": 3},
+                  {"provincia": "Tucuman", "producto": "Gasoil", "idempresa": 4},
+                  {"provincia": "Catamarca", "producto": "Nafta (Comun)", "idempresa": 5}]
+
+    ## Usamos sorted porque no nos interesa en que orden se guarden los elementos a buscar, solo que estén todos y no se repitan
+    assert sorted(obtener_campos_unicos(estaciones, "provincia")) == sorted(["Santa Fe", "Buenos Aires", "Tucuman", "Catamarca"])
+    assert sorted(obtener_campos_unicos(estaciones, "provincia")) != sorted(["Santa Fe", "Santa Fe" , "Buenos Aires", "Tucuman", "Catamarca"])
+    assert sorted(obtener_campos_unicos(estaciones, "producto")) == sorted(["GNC", "Nafta (Super)", "Gasoil", "Nafta (Comun)"])
+    assert obtener_campos_unicos(estaciones, "idempresa") == [1, 2, 3, 4, 5]
