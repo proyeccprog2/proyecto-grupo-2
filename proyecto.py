@@ -120,14 +120,12 @@ def filtrar_estaciones_por_provincia(datos: list[dict], provincia: str) -> list[
     #DEVUELVO LA LISTA CON TODAS LAS COORDENADAS ENCONTRADAS
     return resultado
 
-############ Se puede testear
 def obtener_campos_unicos(estaciones: list[dict], columna: str) -> list[str]:
     resultado = set()
     for estacion in estaciones:
         resultado.add(estacion[columna])
     return list(resultado)
     
-######### Se puede testear
 def filtrar_por_provincia_combustible(estaciones: list[dict], provincia: str, combustible: str) -> list[dict]:
     
     estaciones_filtradas = []
@@ -136,7 +134,6 @@ def filtrar_por_provincia_combustible(estaciones: list[dict], provincia: str, co
             estaciones_filtradas.append(estacion)
     return estaciones_filtradas
 
-######### Se puede testear
 def obtener_estacion_barata(estaciones: list[dict], provincia: str, combustible: str) -> list[dict]:
     estaciones_filtradas = filtrar_por_provincia_combustible(estaciones, provincia, combustible)
     resultado = []
@@ -406,6 +403,78 @@ def dibujar_precio_mas_barato(datos):
 
     # mostramos la tabla en Streamlit
     st.table(tabla)
+
+def ordenar_promedios(promedios: list[dict]):
+    n = len(promedios)
+    for i in range(n):
+        for j in range(0, n - i - 1):
+            # Si el precio actual es MENOR al siguiente, los intercambiamos de lugar
+            # (Así los más caros van quedando al principio de la lista)
+            if promedios[j]["precio_promedio"] < promedios[j+1]["precio_promedio"]:
+                # Intercambio de posiciones
+                aux = promedios[j]
+                promedios[j] = promedios[j+1]
+                promedios[j+1] = aux
+
+    return promedios
+
+def obtener_10_promedios_altos(estaciones:list[dict]) -> list[dict]:
+    agrupados = {}
+
+    for estacion in estaciones:
+        id_est = estacion["idemprecuitsa"]
+
+        if id_est not in agrupados:
+            agrupados[id_est] = {
+                "empresa": estacion["empresa"],
+                "suma_precios": 0,
+                "cantidad": 0
+            }
+        
+        agrupados[id_est]["suma_precios"] += estacion["precio"]
+        agrupados[id_est]["cantidad"] += 1
+    
+    promedios = []
+
+    for id_est, info in agrupados.items():
+        promedio = info["suma_precios"] / info["cantidad"]
+        promedios.append({
+            "empresa": info["empresa"],
+            "precio_promedio": promedio
+        })
+
+    promedios = ordenar_promedios(promedios)
+    return promedios[:10]
+
+def dibujar_promedios_altos(datos: list[dict]):
+    st.subheader("Top 10 estaciones con el precio promedio más alto")
+
+    top10 = obtener_10_promedios_altos(datos)
+
+    nombres = []
+    precios = []
+
+    # Preparamos las listas para el gráfico
+    for est in top10:
+        # Ponemos un \n para que la ubicación aparezca en el renglón de abajo en el gráfico
+        etiqueta = str(est['empresa'])
+        nombres.append(etiqueta)
+        precios.append(est["precio_promedio"])
+
+    # Agrandamos un poco la figura (figsize) porque son 10 barras con textos largos
+    fig, ax = plt.subplots(figsize=(12, 6))
+
+    ax.bar(nombres, precios, color='salmon')
+
+    ax.set_ylabel("Precio Promedio ($)")
+    ax.set_title("Estaciones más caras del país (Promedio de todos sus combustibles)")
+
+    # Rotamos el texto 45 grados y lo alineamos a la derecha para que no se pisen las palabras
+    plt.xticks(rotation=45, ha='right')
+    plt.tight_layout() # Evita que los textos se corten en los bordes
+
+    st.pyplot(fig)
+
 def main():
 
     st.title("combustibles")
@@ -413,6 +482,7 @@ def main():
     datos = leer_datos_csv("precios_surtidor_2024_2025_2026.csv")
     dibujar_mapa(datos)
     dibujar_mas_caras(datos)
+    dibujar_promedios_altos(datos)
     dibujar_grafico_marcas(datos)
     dibujar_precio_mas_barato(datos)
 

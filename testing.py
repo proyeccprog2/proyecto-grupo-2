@@ -1,4 +1,4 @@
-from proyecto import obtener_estaciones_unicas, filtrar_estaciones_por_provincia, contar_marcas_por_provincia, obtener_precio_mas_barato, obtener_estacion_barata, filtrar_por_provincia_combustible, obtener_campos_unicos
+from proyecto import obtener_estaciones_unicas, filtrar_estaciones_por_provincia, contar_marcas_por_provincia, obtener_precio_mas_barato, obtener_estacion_barata, filtrar_por_provincia_combustible, obtener_campos_unicos, ordenar_promedios, obtener_10_promedios_altos
 
 def test_obtener_estaciones_unicas():
     '''Testeamos que la función elimine las empresas repetidas'''
@@ -102,3 +102,24 @@ def test_obtener_campos_unicos():
     assert sorted(obtener_campos_unicos(estaciones, "provincia")) != sorted(["Santa Fe", "Santa Fe" , "Buenos Aires", "Tucuman", "Catamarca"])
     assert sorted(obtener_campos_unicos(estaciones, "producto")) == sorted(["GNC", "Nafta (Super)", "Gasoil", "Nafta (Comun)"])
     assert obtener_campos_unicos(estaciones, "idempresa") == [1, 2, 3, 4, 5]
+
+def test_ordenar_promedios():
+    promedios = [{"id":1, "precio_promedio":10},
+                 {"id":2, "precio_promedio":16},
+                 {"id":3, "precio_promedio":20},
+                 {"id":4, "precio_promedio":4}]
+    
+    assert ordenar_promedios(promedios) == [{"id":3, "precio_promedio":20},
+                                            {"id":2, "precio_promedio":16},
+                                            {"id":1, "precio_promedio":10},
+                                            {"id":4, "precio_promedio":4}]
+
+def test_obtener_10_promedios_altos():
+    estaciones = [{"idemprecuitsa":1, "empresa":"YPF", "precio": 150},
+                 {"idemprecuitsa":2, "empresa":"Shell", "precio": 200},
+                 {"idemprecuitsa":2, "empresa":"Shell", "precio": 100},
+                 {"idemprecuitsa":1, "empresa":"YPF", "precio": 120},
+                 {"idemprecuitsa":1, "empresa":"YPF", "precio": 50}]
+    
+    assert obtener_10_promedios_altos(estaciones) == [{"empresa":"Shell", "precio_promedio":150},
+                                                      {"empresa":"YPF", "precio_promedio":(320/3)}]
