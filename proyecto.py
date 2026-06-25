@@ -449,8 +449,8 @@ def dibujar_grafico_marcas(datos: list[dict]):
     st.pyplot(fig)
 
 # funcion que recibe los datos, una provincia y un combustible
-# devuelve la estacion con el precio mas barato para esa combinación
-def obtener_precio_mas_barato(datos: list[dict], provincia: str, combustible: str):
+# devuelve las 5 estaciones con el precio mas barato para esa combinación
+def obtener_5_precios_mas_baratos(datos: list[dict], provincia: str, combustible: str) -> list[dict]:
     '''
     Diseño de datos:
     datos: List[diccionario]
@@ -458,90 +458,101 @@ def obtener_precio_mas_barato(datos: list[dict], provincia: str, combustible: st
     combustible: string
 
     Signatura:
-    obtener_precio_mas_barato:
-    List[diccionario] string string -> diccionario
+    obtener_5_precios_mas_baratos:
+    List[diccionario] string string -> List[diccionario]
 
     Propósito:
-    busca la estación con el precio más barato para una provincia
+    busca las 5 estaciones con el precio más barato para una provincia
     y combustible determinados.
 
     Ejemplos:
-    obtener_precio_mas_barato(datos, "BUENOS AIRES","GNC") =
-    {"combustible":"GNC",
-    "provincia":"BUENOS AIRES",
-    "empresa":"BLESER S.R.L.",
-    "localidad":"LA PLATA",
-    "precio":579.0}
+    obtener_5_precios_mas_baratos(datos, "BUENOS AIRES","GNC") =
+    [
+        {"combustible":"GNC","provincia":"BUENOS AIRES","empresa":"X","localidad":"LA PLATA","precio":579.0},
+        {"combustible":"GNC","provincia":"BUENOS AIRES","empresa":"Y","localidad":"QUILMES","precio":581.0},
+        ...
+    ]
     '''
     # lista vacia donde vamos a guardar las estaciones que cumplen el filtro
     filtradas = []
+
     # recorremos todo el dataset buscando coincidencias de provincia y combustible
     for est in datos:
         if est["provincia"] == provincia and est["producto"] == combustible:
             filtradas.append(est)
 
-    # si no encontramos ninguna estación que cumpla el filtro, devolvemos None
+    # si no encontramos ninguna estación que cumpla el filtro, devolvemos lista vacia
     if not filtradas:
-        return None
+        return []
 
-    # suponemos que la primera estación es la mas barata
-    estacion_barata = filtradas[0]
+    resultado = []
 
-    # recorremos el resto buscando si hay una con menor precio
-    for est in filtradas[1:]:
-        if est["precio"] < estacion_barata["precio"]:
-            estacion_barata = est
+    # mientras no tengamos 5 resultados y todavia queden estaciones filtradas
+    while len(resultado) < 5 and len(filtradas) > 0:
+        # suponemos que la primera es la mas barata
+        estacion_barata = filtradas[0]
 
-    # devolvemos un diccionario con los datos mas importantes de la estación encontrada
-    return {
-        "combustible": combustible,
-        "provincia": provincia,
-        "empresa": estacion_barata["empresa"],
-        "localidad": estacion_barata["localidad"],
-        "precio": estacion_barata["precio"]
-    }
+        # recorremos el resto buscando una estacion con menor precio
+        for est in filtradas:
+            if est["precio"] < estacion_barata["precio"]:
+                estacion_barata = est
 
+        # guardamos en resultado solo los datos importantes de la estacion encontrada
+        resultado.append({
+            "combustible": combustible,
+            "provincia": provincia,
+            "empresa": estacion_barata["empresa"],
+            "localidad": estacion_barata["localidad"],
+            "precio": estacion_barata["precio"]
+        })
 
+        # eliminamos esa estacion para no volver a contarla
+        filtradas.remove(estacion_barata)
+
+    return resultado
 # funcion encargada de mostrar en Streamlit la estacion mas barata
 # segun la provincia y el combustible seleccionado
+# funcion encargada de mostrar en Streamlit las 5 estaciones mas baratas
+# segun la provincia y el combustible seleccionado
 def dibujar_precio_mas_barato(datos):
-    st.subheader("Precio más barato por combustible en una provincia")
+    st.subheader("Top 5 precios más baratos por combustible en una provincia")
 
     # obtenemos todas las provincias disponibles en el dataset sin repetir
     provincias = sorted(obtener_campos_unicos(datos, "provincia"))
 
-    #selector en la barra lateral para elegir provincia
+    # selector para elegir provincia
     provincia = st.selectbox("Seleccioná una provincia", provincias, key="prov_barato")
 
     # obtenemos todos los tipos de combustible disponibles
     combustibles = sorted(obtener_campos_unicos(datos, "producto"))
 
-    # selector en la barra lateral para elegir combustible
+    # selector para elegir combustible
     combustible = st.selectbox("Seleccioná un combustible", combustibles, key="comb_barato")
 
-    #llamamos a la función que busca la estación mas barata
-    resultado = obtener_precio_mas_barato(datos, provincia, combustible)
+    # llamamos a la función que busca las 5 estaciones mas baratas
+    resultados = obtener_5_precios_mas_baratos(datos, provincia, combustible)
 
-    # si no hay datos para esa combinacion, mostramos
-    if resultado is None:
+    # si no hay datos para esa combinacion, mostramos advertencia
+    if not resultados:
         st.warning("no hay datos para esa selección")
         return
 
-#mostramos un mensaje de éxito con el precio encontrado
-    st.success(f"El precio mas barato de {combustible} en {provincia} es ${resultado['precio']}")
+    # mostramos el precio mas bajo de todos los encontrados
+    st.success(f"El precio más barato de {combustible} en {provincia} es ${resultados[0]['precio']}")
 
-    # armamos una tabla con los datos de la estacionn encontrada
-    tabla = [{
-        "Combustible": resultado["combustible"],
-        "Provincia": resultado["provincia"],
-        "Empresa": resultado["empresa"],
-        "Localidad": resultado["localidad"],
-        "Precio por litro": resultado["precio"]
-    }]
+    # armamos la tabla con las 5 estaciones encontradas
+    tabla = []
+    for resultado in resultados:
+        tabla.append({
+            "Combustible": resultado["combustible"],
+            "Provincia": resultado["provincia"],
+            "Empresa": resultado["empresa"],
+            "Localidad": resultado["localidad"],
+            "Precio por litro": resultado["precio"]
+        })
 
     # mostramos la tabla en Streamlit
     st.table(tabla)
-
 def ordenar_promedios(promedios: list[dict]):
     '''
     Diseño de datos:
